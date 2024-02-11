@@ -7,20 +7,22 @@ date: "2024-02-11"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-### Co2 emissions etc
+## Co2 emissions etc
 Note: you can't just include variables from the global environment, the document has to be reproducible by itself, therefore you have to load all the data, create pltos etc here - but - it doesn't have to be visible, you can hide the code with {r, echo=FALSE}
 
 ```{r, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
 # load the libraries, data
 library(tidyverse, warn.conflicts=F, quietly=T)
 library(readr, warn.conflicts=F, quietly=T)
+library(stringr, warn.conflicts=F, quietly=T)
 library(ggExtra, warn.conflicts=F, quietly=T)
 library(readxl, warn.conflicts=F, quietly=T)
 
 co2_data <- read_csv("data/co2_data_selected_columns.csv")
+co2_data_countries <- read_csv("data/co2_data_selected_columns_countries_only.csv")
 ```
-
-
+### General analysis over time
+First, we want to check if any very general trends of co2 emissions can be seen in the whole dataset. For that, we can plot the amount of co2 released throughout time, for every country in the dataset.
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
 co2_xy <- ggplot(
   co2_data,
@@ -32,4 +34,215 @@ co2_xy <- ggplot(
 co2_xy_hist <- ggMarginal(co2_xy, type="density")
 
 co2_xy_hist
+```
+Clearly, we can see, since about the start of the 20th century, some countries start to overshadow others in terms of emissions. From the distribution of year values above the graph,  we can also see, for the earlier years of the dataset, a lot of values are missing.
+
+It is also worth noting, in the dataset, beside countries present are grouped statristics for continents and important regions, which, for further analysis, were separated from the main dataset, to be analyzed separately, and possibly in comparison to individual countries.
+
+To limit our focus to the key players, let's look at the top 10 countries, by the sum of emissions released over time.
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data_by_country <- co2_data_countries |>
+  group_by(country) |>
+  summarize(total_co2 = sum(co2, na.rm = TRUE))
+
+top10_co2_countries <- co2_data_by_country |>
+  arrange(desc(total_co2)) |>
+  head(10) |>
+  select('country')
+
+top10_co2_countries <- unlist(top10_co2_countries, use.names=FALSE)
+
+co2_data |>
+  filter(country %in% top10_co2_countries) |>
+  ggplot(
+    aes(x = year, y=co2, color=country)
+  ) +
+  geom_line(size=2) +
+  ggtitle("Total co2 emissions over time for the top 10 countries")
+```
+Facet by countries
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data |>
+  filter(country %in% top10_co2_countries) |>
+  ggplot(
+    aes(x = year, y = co2, color = country)
+  ) +
+  geom_line(size = 2) +
+  ggtitle("Co2 emissions faceted by country") +
+  facet_wrap(~ country)
+```
+Let's look at some Individual countries
+
+United States, seems to have had an interesting relation with co2 emissions. Very Whilst the general trend is upward, for about 15 yers now, it has turned downwards. The influence of important global events can also be seen.
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data |>
+  filter(country == 'United States') |>
+  ggplot(
+    aes(x = year, y = co2, color = country)
+  ) +
+  geom_line(size = 2) +
+  geom_vline(xintercept = 1930, linetype='dashed',
+             color = 'blue', size = 1.2) +
+  geom_text(x=1930, y = 6000, label = "The Great Depression",
+            color = 'blue') +
+  geom_vline(xintercept = 2008, linetype='dashed',
+             color = 'green', size = 1.2) +
+  geom_text(x=2000, y = 2000, label = "The 2008 Crash",
+            color = 'green') +
+  ggtitle("United States")
+```
+Germany, while on a much smaller (about 1/6) scale, follows a very similar trend of strong emission rise, then a downwards trend in the 21st century.
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data |>
+  filter(country == 'Germany') |>
+  ggplot(
+    aes(x = year, y = co2, color = country)
+  ) +
+  geom_line(size = 2) +
+  geom_vline(xintercept = 1933, linetype='dashed',
+             color = 'brown', size = 1.2) +
+  geom_text(x=1920, y = 950, label = "Hitler assigned as Chancellor",
+            color = 'brown') +
+  geom_vline(xintercept = 1945, linetype='dashed',
+             color = 'blue', size = 1.2) +
+  geom_text(x=1945, y = 900, label = "End of WW2",
+            color = 'blue') +
+  geom_vline(xintercept = 1989, linetype='dashed',
+             color = 'green', size = 1.2) +
+  geom_text(x=1989, y = 300, label = "The Fall of The Berlin Wall",
+            color = 'green') +
+  ggtitle("Germany")
+```
+For a different kind of trend, we can, for example look at China:
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data |>
+  filter(country == 'China') |>
+  ggplot(
+    aes(x = year, y = co2, color = country)
+  ) +
+  geom_line(size = 2) +
+  geom_vline(xintercept = 2012, linetype='dashed',
+             color = 'green', size = 1.2) +
+  geom_text(x=2012, y = 3000, label = "Xi Jinping",
+            color = 'green') +
+  ggtitle("China")
+```
+Bottom 10 countries, notice that for a lot of these data is missing, which might contribute to their lower scores, but the scale of emissions is so small, that's probably not the case.
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+bot10_co2_countries <- co2_data_by_country |>
+  filter(total_co2 > 0) |>
+  arrange(total_co2) |>
+  head(10) |>
+  select('country')
+
+bot10_co2_countries <- unlist(bot10_co2_countries, use.names=FALSE)
+
+bot10_co2_countries
+
+saveRDS(bot10_co2_countries, file="bot10_co2_countries_names.rds")
+
+co2_data |>
+  filter(country %in% bot10_co2_countries) |>
+  ggplot(
+    aes(x = year, y=co2, color=country)
+  ) +
+  geom_line(size=2) +
+  ggtitle("Total co2 emissions over time for bottom 10 countries")
+```
+Top 10 countries by population:
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+top10_pop_countries <- readRDS(file="top10_pop_countries_names.rds")
+
+co2_data |>
+  filter(country %in% top10_pop_countries) |>
+  ggplot(
+    aes(x = year, y=population, color=country)
+  ) +
+  geom_line(size=2) +
+  ggtitle("Total population over time for top 10 countries")
+```
+Population and co2 emissions for United States
+credits to user Megatron's [answer](https://stackoverflow.com/a/51844068)
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+max_co2_US <- co2_data |>
+  filter(country == 'United States') |>
+  select('co2') |>
+  max(na.rm = TRUE)
+
+max_pop_US <- co2_data |>
+  filter(country == 'United States') |>
+  select('population') |>
+  max(na.rm = TRUE)
+
+scaleFactor <- max_co2_US / max_pop_US
+
+co2_data |>
+  filter(country == 'United States') |>
+  ggplot(
+    aes(x = year)
+  ) +
+  geom_line(aes(y = co2, color = "co2")) +
+  geom_line(aes(y = population * scaleFactor, color = "population")) +
+  scale_y_continuous(
+    name = "co2",
+    sec.axis = sec_axis(~./scaleFactor, name = 'population')
+  ) +
+  ggtitle("Co2 and population for United States")
+```
+Top 10 countries by co2 vs rest of world
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+top10_co2_countries_data <- co2_data |>
+  filter(country %in% top10_co2_countries)
+
+top10_co2_data_by_year <- top10_co2_countries_data |>
+  group_by(year) |>
+  summarize(total_co2 = sum(co2, na.rm = TRUE))
+
+not_top10_co2_countries_data <- co2_data |>
+  filter(!country %in% top10_co2_countries)
+
+not_top10_co2_data_by_year <- not_top10_co2_countries_data |>
+  group_by(year) |>
+  summarize(total_co2 = sum(co2, na.rm = TRUE))
+
+top10_co2_data_by_year
+
+ggplot(NULL, aes(x=year, y=total_co2)) +
+  geom_line(data = top10_co2_data_by_year,
+            aes(color = 'top 10')) +
+  geom_line(data = not_top10_co2_data_by_year,
+            aes(color = 'rest of world')) +
+  ggtitle("Top10 vs not top 10 sum")
+```
+In pie form
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+top10_co2_sum <- sum(top10_co2_data_by_year$total_co2)
+not_top10_co2_sum <- sum(not_top10_co2_data_by_year$total_co2)
+
+donut_data <- data.frame(
+  group = c('top 10', 'rest of world'),
+  value = c(top10_co2_sum, not_top10_co2_sum)
+)
+
+ggplot(donut_data, aes(x="", y=value, fill=group)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0)
+```
+Co2 vs population for the top 10 countries
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+top10_co2_countries_data |>
+  ggplot(
+    aes(x = population, y = co2, color=country)
+  ) +
+  geom_point()
+```
+Zoomed in
+A trend tends to become visible, where the slowdown of population growth corresponds to the lowering of co2 emissions. Is this a direct correlation of population decline or a sign of general 21st century societal changes in approach to co2 emissions and way of living?
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+top10_co2_countries_data |>
+  ggplot(
+    aes(x = population, y = co2, color=country)
+  ) +
+  geom_point() +
+  coord_cartesian(xlim = c(0, 350000000))
 ```

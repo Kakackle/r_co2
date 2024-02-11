@@ -1,0 +1,35 @@
+---
+title: "co2_1"
+output: html_document
+date: "2024-02-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### Co2 emissions etc
+Note: you can't just include variables from the global environment, the document has to be reproducible by itself, therefore you have to load all the data, create pltos etc here - but - it doesn't have to be visible, you can hide the code with {r, echo=FALSE}
+
+```{r, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
+# load the libraries, data
+library(tidyverse, warn.conflicts=F, quietly=T)
+library(readr, warn.conflicts=F, quietly=T)
+library(ggExtra, warn.conflicts=F, quietly=T)
+library(readxl, warn.conflicts=F, quietly=T)
+
+co2_data <- read_csv("data/co2_data_selected_columns.csv")
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_xy <- ggplot(
+  co2_data,
+  aes(x = year, y = co2)
+) +
+  geom_point() +
+  ggtitle("Total co2 emissions over time for each country")
+
+co2_xy_hist <- ggMarginal(co2_xy, type="density")
+
+co2_xy_hist
+```

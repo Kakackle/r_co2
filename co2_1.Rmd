@@ -246,3 +246,245 @@ top10_co2_countries_data |>
   geom_point() +
   coord_cartesian(xlim = c(0, 350000000))
 ```
+### 2021 analysis
+As 2021 is the latest year available in the dataset.
+For example, checking the relation between co2 emissions and population
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_pop_2021 <- co2_data_countries |>
+  filter(year == 2021) |>
+  ggplot(
+    aes(x = population, y = co2)
+  ) +
+  geom_point() +
+  geom_point(data = co2_data_countries
+             |> filter(country %in% c('India', 'United States', 'China'))
+             |> filter(year == 2021),
+             pch = 21,
+             size = 5,
+             color = 'red') +
+  geom_text(x=1.3e+09, y=1.1e+04, label='China') +
+  geom_text(x=1.3e+09, y=2e+03, label='India') +
+  geom_text(x=3e+08, y=4e+03, label='United States')
+co2_pop_2021_dens <-ggMarginal(co2_pop_2021, type='histogram')
+co2_pop_2021_dens
+```
+Zooming in for further insight about most of the world
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_pop_2021 <- co2_pop_2021 +
+  coord_cartesian(xlim = c(0, 3e+08),
+                  ylim = c(0, 2e+03)) +
+  geom_smooth(method = lm, level = 0.99)
+
+co2_pop_2021_dens <-ggMarginal(co2_pop_2021, type='histogram')
+co2_pop_2021_dens
+```
+To compare co2 emissions vs gdp, a step back to 2018 was necessary, as the dataset is missing gdp data past that year, for any country. Once again zoomed in to exclude China, United States and India
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_gdp_2018 <- co2_data_countries |>
+  filter(year == 2018) |>
+  ggplot(
+    aes(x = gdp, y = co2)
+  ) +
+  geom_point() +
+  coord_cartesian(xlim = c(0, 5e+12),
+                ylim = c(0, 2e+03)) +
+  geom_smooth(method = lm, level = 0.99)
+
+co2_gdp_2018
+
+co2_gdp_2018_dens <-ggMarginal(co2_gdp_2018, type='histogram')
+co2_gdp_2018_dens
+```
+2018 gdp and population
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+pop_gdp_2018 <- co2_data_countries |>
+  filter(year == 2018) |>
+  ggplot(
+    aes(x = population, y = gdp)
+  ) +
+  geom_point() +
+  coord_cartesian(xlim = c(0, 3e+08),
+                  ylim = c(0, 5e+12)) +
+  geom_smooth(method = lm, level = 0.99)
+
+pop_gdp_2018
+
+pop_gdp_2018_dens <-ggMarginal(pop_gdp_2018, type='histogram')
+pop_gdp_2018_dens
+```
+### Multi-country groupings
+As defined / presented in the dataset, where countries were grouped by continent, whether they belong to OECD (Organisation for Economic Co-operation and Development) and by income tiers.
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+income_split <- co2_data |>
+  filter(str_detect(country, '.*income.*'))
+income_split |>
+  ggplot(
+    aes(x = year, y = co2, color = country)
+  ) +
+  geom_point() +
+  ggtitle(label="co2 emissions by year per income group")
+```
+Unfortunately, a metric for belonging to these income groups was not provided (no GDP thresholds / values provided).
+Population:
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+income_split |>
+  ggplot(
+    aes(x = year, y = population, color = country)
+  ) +
+  geom_point() +
+  ggtitle(label="population by year per income group")
+```
+Co2 vs income group boxplots
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+income_split |>
+  ggplot(
+    aes(x = country, y = co2)
+  ) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.5, hjust=1)) +
+  ggtitle(label="co2 distribution per income group")
+```
+### continents and important regions
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+
+continents = c('Africa', 'Asia', 'Asia (excl. China and India)',
+               'Central America (GCP)', 'Europe', 'International transport',
+               'Middle East (GCP)', 'North America',
+               'North America (excl. USA)', 'Oceania',
+               'South America (GCP)')
+
+co2_data_non_countries <- read_csv("data/co2_data_selected_columns_non_countries_only.csv")
+
+co2_data_continents <- co2_data_non_countries |>
+  filter(country %in% continents)
+
+co2_data_continents |>
+  ggplot(
+    aes(x = year, y = co2, color = country)
+  ) +
+  geom_point() +
+  ggtitle(label="co2 emissions per continent / important region")
+```
+### Per capita and participation proportions
+Looking at the plot of co2 emissions per capita by year, various outliers seem to appear, muddying the whole image
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data_countries |>
+  ggplot(
+    aes(x = year, y = co2_per_capita)
+  ) +
+  geom_point() +
+  ggtitle(label="Co2 per capita")
+```
+Looking at the plot of co2 per capita and population, the answer for these outliers seems to be appearing; a very high or a very low population can lead to unusual per capita values
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data_countries |>
+  ggplot(
+    aes(x = population, y = co2_per_capita)
+  ) +
+  geom_point() +
+  ggtitle(label="Co2 per capita against population")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data_countries |>
+  ggplot(
+    aes(x = year, y = co2_per_unit_energy)
+  ) +
+  geom_point() +
+  ggtitle(label="co2 per unity energy")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data_countries |>
+  ggplot(
+    aes(x = year, y = energy_per_capita)
+  ) +
+  geom_point() +
+  ggtitle(label="energy_per_capita")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+co2_data_countries |>
+  ggplot(
+    aes(x = year, y = temperature_change_from_co2)
+  ) +
+  geom_point() +
+  ggtitle(label="temperature_change_from_co2")
+```
+#### Participation / categories
+What actually contributes to the total co2 emissions around the world, where do the emissions come from?
+Where categories are defined as:
+* coal_co2 - Annual emissions of carbon dioxide (CO2) from coal, measured in million tonnes.
+* consumption_co2 - 	
+Annual consumption-based emissions of carbon dioxide (CO2), measured in million tonnes.
+* oil_co2
+* trade_co2 - Annual net carbon dioxide (CO2) emissions embedded in trade, measured in million tonnes.
+* optionally: co2_including_luc - Annual total emissions of carbon dioxide (CO2), including land-use change, measured in million tonnes.
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+categories = c('coal_co2', 'consumption_co2', 'oil_co2', 'trade_co2')
+
+co2_data_categories <- subset(co2_data_countries, select=categories)
+
+co2_data_categories_pivot <- tidyr::pivot_longer(co2_data_categories, categories)
+
+co2_data_cat_pivot_group <- co2_data_categories_pivot |>
+  group_by(name) |>
+  summarize(
+    value_sum = sum(value, na.rm = TRUE)
+  )
+
+ggplot(co2_data_cat_pivot_group,
+       aes(x="", y=value_sum, fill=name)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) +
+  ggtitle(label="coal, consumption, oil, trade co2 emissions (tonnes)")
+```
+Contribution by input group
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+categories_country = c('country', 'coal_co2', 'consumption_co2', 'oil_co2',
+                       'trade_co2')
+
+income_data_categories <- subset(income_split, select=categories_country)
+
+income_data_categories_pivot <- tidyr::pivot_longer(income_data_categories, categories)
+
+income_data_cat_pivot_group <- income_data_categories_pivot |>
+  group_by(country, name) |>
+  summarize(
+    value_sum = sum(value, na.rm = TRUE)
+  )
+
+income_data_cat_pivot_group |>
+  ggplot(
+    aes(country, value_sum, fill = name)
+    ) +
+  geom_col(position = 'fill') +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.5, hjust=1)) +
+  coord_cartesian(ylim = c(0, 1)) +
+  ggtitle(label = "contribution by income group")
+```
+Contribution by continent / major region
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+continent_data_categories <- subset(co2_data_continents, select=categories_country)
+
+continent_data_categories_pivot <- tidyr::pivot_longer(continent_data_categories, categories)
+
+continent_data_cat_pivot_group <- continent_data_categories_pivot |>
+  group_by(country, name) |>
+  summarize(
+    value_sum = sum(value, na.rm = TRUE)
+  )
+
+continent_data_cat_pivot_group |>
+  ggplot(
+    aes(country, value_sum, fill = name)
+  ) +
+  geom_col(position = 'fill') +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.5, hjust=1)) +
+  coord_cartesian(ylim = c(0, 1)) +
+  ggtitle(label = "contribution by continent")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.align = 'center'}
+
+```
